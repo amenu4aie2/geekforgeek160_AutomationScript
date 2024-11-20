@@ -4,7 +4,7 @@
 // @version      1.6
 // @description  Post a summary from a GeeksforGeeks problem to LinkedIn along with a screenshot
 // @author       Your Name
-// @match        https://www.geeksforgeeks.org/batch/gfg-160-problems
+// @match        https://www.geeksforgeeks.org/batch/gfg-160-problems*
 // @grant        GM_xmlhttpRequest
 // @connect      api.linkedin.com
 // @connect      www.linkedin.com
