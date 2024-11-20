@@ -1,187 +1,25 @@
-// ==UserScript==
-// @name         LinkedIn Post for GeeksforGeeks Problem with Screenshot
-// @namespace    http://tampermonkey.net/
-// @version      1.6
-// @description  Post a summary from a GeeksforGeeks problem to LinkedIn along with a screenshot
-// @author       Your Name
-// @match        https://www.geeksforgeeks.org/problems/*
-// @grant        GM_xmlhttpRequest
-// @connect      api.linkedin.com
-// @connect      www.linkedin.com
-// @grant        GM_addStyle
-// @grant        GM_download
-// @require      https://unpkg.com/html2canvas@1.0.0-alpha.9/dist/html2canvas.js
-// ==/UserScript==
+🎯 Automate LinkedIn Posts with Screenshots from GeeksforGeeks! 🚀
 
-(function () {
-    'use strict';
+I recently created a Tampermonkey script to automate posting summaries of GeeksforGeeks problems to LinkedIn. It even captures a screenshot of the problem page! Here's what it does:
+🔹 Fetches the problem title, description, and tags.
+🔹 Captures a screenshot using html2canvas.
+🔹 Uploads the screenshot to LinkedIn using its API.
+🔹 Creates a LinkedIn post with structured content and hashtags.
 
-    const ACCESS_TOKEN = "YOUR_ACCESS_TOKEN_HERE"; // Replace with your LinkedIn access token
+💡 Why?
+To save time for developers participating in #GFG160 or #geekstreak2024, and to make sharing problem-solving journeys seamless.
 
-    // Convert GM_xmlhttpRequest into a Promise for `async/await` compatibility
-    function GM_fetch(options) {
-        return new Promise((resolve, reject) => {
-            GM_xmlhttpRequest({
-                ...options,
-                onload: (response) => resolve(response),
-                onerror: (error) => reject(error),
-            });
-        });
-    }
+📜 Here's the script:
 
-    // Function to fetch the LinkedIn URN dynamically
-    async function fetchLinkedInURN() {
-        const response = await GM_fetch({
-            method: "GET",
-            url: "https://api.linkedin.com/v2/userinfo",
-            headers: {
-                "Authorization": `Bearer ${ACCESS_TOKEN}`,
-            },
-        });
-        const data = JSON.parse(response.responseText);
-        console.log("LinkedIn URN:", data.sub);
-        return data.sub; // Return the LinkedIn URN
-    }
+javascript
+Copy code
+// Paste the entire script here.
+📺 Video Tutorial to Create a LinkedIn Token:
+How to Create a LinkedIn API Token
 
-    // Function to register upload
-    async function registerUpload(personURN) {
-        const requestBody = {
-            registerUploadRequest: {
-                recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
-                owner: `urn:li:person:${personURN}`,
-                serviceRelationships: [
-                    {
-                        relationshipType: "OWNER",
-                        identifier: "urn:li:userGeneratedContent",
-                    },
-                ],
-            },
-        };
+👉 How to Use the Script:
 
-        const response = await GM_fetch({
-            method: "POST",
-            url: "https://api.linkedin.com/v2/assets?action=registerUpload",
-            headers: {
-                "Authorization": `Bearer ${ACCESS_TOKEN}`,
-                "Content-Type": "application/json",
-            },
-            data: JSON.stringify(requestBody),
-        });
-
-        const data = JSON.parse(response.responseText);
-        const uploadUrl =
-            data.value.uploadMechanism[
-                "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
-            ].uploadUrl;
-        const asset = data.value.asset;
-
-        console.log("Upload URL:", uploadUrl);
-        console.log("Asset:", asset);
-        return { uploadUrl, asset };
-    }
-
-    // Function to upload media (image)
-    async function uploadMedia(uploadUrl, file) {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        await GM_fetch({
-            method: "POST",
-            url: uploadUrl,
-            data: formData,
-        });
-
-        console.log("Upload successful");
-    }
-
-    // Function to create the LinkedIn post
-    async function createLinkedInPost(personURN, asset, question, intuition, tags, daysSince, approach) {
-        const apiUrl = "https://api.linkedin.com/v2/ugcPosts";
-        const postContent = `${question}\n\nIntuition: ${intuition}\nTags: ${tags}\n#GFG160\n#geekstreak2024\n#GeeksforGeeks\nDays Since 15-Nov-2024: ${daysSince} days\nApproach: ${approach}`;
-
-        const requestBody = {
-            author: `urn:li:person:${personURN}`,
-            lifecycleState: "PUBLISHED",
-            specificContent: {
-                "com.linkedin.ugc.ShareContent": {
-                    shareCommentary: { text: postContent },
-                    shareMediaCategory: "IMAGE",
-                    media: [
-                        {
-                            status: "READY",
-                            media: asset,
-                            description: { text: "GeeksforGeeks Problem Screenshot" },
-                        },
-                    ],
-                },
-            },
-            visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
-        };
-
-        const response = await GM_fetch({
-            method: "POST",
-            url: apiUrl,
-            headers: {
-                "Authorization": `Bearer ${ACCESS_TOKEN}`,
-                "Content-Type": "application/json",
-                "X-Restli-Protocol-Version": "2.0.0",
-            },
-            data: JSON.stringify(requestBody),
-        });
-
-        if (response.status === 201) {
-            console.log("Post created successfully!");
-            alert("Your LinkedIn post was created successfully!");
-        } else {
-            console.error("Failed to create post:", response.responseText);
-            alert("Failed to create post: See console for details.");
-        }
-    }
-
-    // Function to convert a data URL to a file
-    function dataURLToFile(dataUrl, filename) {
-        const arr = dataUrl.split(",");
-        const mime = arr[0].match(/:(.*?);/)[1];
-        const bstr = atob(arr[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while (n--) u8arr[n] = bstr.charCodeAt(n);
-        return new File([u8arr], filename, { type: mime });
-    }
-
-    // Handle button click to fetch details and post to LinkedIn
-    const button = document.createElement("button");
-    button.textContent = "Post to LinkedIn";
-    button.style.position = "fixed";
-    button.style.top = "10px";
-    button.style.right = "10px";
-    button.style.zIndex = "1000";
-    document.body.appendChild(button);
-
-    button.addEventListener("click", async () => {
-        try {
-            const personURN = await fetchLinkedInURN();
-            const title = document.querySelector("h3.g-m-0").textContent.trim();
-            const description = document.querySelector("div.problems_problem_content__Xm_eO").textContent.trim();
-            const topics = Array.from(document.querySelectorAll("div .ui.labels a"))
-                .map((el) => el.textContent.trim())
-                .join(", ");
-
-            const startDate = new Date("2024-11-15");
-            const currentDate = new Date();
-            const daysSince = Math.floor((currentDate - startDate) / (1000 * 3600 * 24));
-
-            const canvas = await html2canvas(document.body);
-            const screenshotDataUrl = canvas.toDataURL("image/png");
-            const file = dataURLToFile(screenshotDataUrl, "screenshot.png");
-
-            const { uploadUrl, asset } = await registerUpload(personURN);
-            await uploadMedia(uploadUrl, file);
-
-            await createLinkedInPost(personURN, asset, title, description, topics, daysSince, "Your approach goes here");
-        } catch (error) {
-            console.error("Error:", error.message);
-            alert(`Failed to post on LinkedIn: ${error.message}`);
-        }
-    });
-})();
+Install Tampermonkey.
+Add this script in Tampermonkey and replace ACCESS_TOKEN with your LinkedIn API token.
+Navigate to any GeeksforGeeks problem page, click "Post to LinkedIn," and the script does the rest!
+💬 Have questions? Drop them below or DM me. Let’s make sharing achievements easier and inspire more learners!
